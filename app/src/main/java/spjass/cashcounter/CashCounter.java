@@ -14,6 +14,7 @@ public class CashCounter {
     private List<Money> moneyArray;
     protected float total;
     Money selectedMoney;
+    Money error;
 
     public CashCounter() {
 
@@ -39,7 +40,8 @@ public class CashCounter {
         Log.d("CashCounter", moneyArray.get(0).getValue() + " "  + moneyArray.get(0).getTotalValue() + "");
         moneyArray.get(5).setCount(25);
         moneyArray.get(4).setCount(25);
-        selectedMoney = moneyArray.get(0);
+        error = new Money(0f, "error", 0);
+        selectedMoney = error;
 
     }
 
@@ -71,6 +73,15 @@ public class CashCounter {
 
     public void setSelectedMoney(Money selectedMoney) {
         this.selectedMoney = selectedMoney;
+    }
+
+    public void clear() {
+        for(Money money : moneyArray) {
+            money.setCount(0);
+        }
+
+        selectedMoney = error;
+        error.setCount(0);
     }
 
     public List<Money> getMoneyArray() {

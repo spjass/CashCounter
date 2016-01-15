@@ -5,7 +5,9 @@ import android.graphics.BitmapFactory;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
@@ -35,7 +37,7 @@ public class MainActivity extends ActionBarActivity {
         setContentView(R.layout.activity_main);
 
         expListView = (ExpandableListView) findViewById(R.id.lvExp);
-        cashCounter = new CashCounter();
+        cashCounter = MySharedPreferences.getCashCounter(this);
         moneyArray = cashCounter.getMoneyArray();
 
         prepareListData();
@@ -91,15 +93,55 @@ public class MainActivity extends ActionBarActivity {
                 }
 
                 ImageView image = (ImageView) findViewById(R.id.coinImageView);
-
+                EditText countEditText = (EditText) findViewById(R.id.selectedItemEditText);
+                countEditText.setText(MyUtil.parseAmount(cashCounter.getSelectedMoney().getCount()));
                 Bitmap icon = cashCounter.getSelectedMoney().icon;
 
                 image.setImageBitmap(icon);
                 return false;
             }
         });
+        final EditText countEditText = (EditText) findViewById(R.id.selectedItemEditText);
+
+        countEditText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //
+                if (countEditText.hasFocus()) {
+                    //((EditText) v).performLongClick();
+                    ((EditText)v).selectAll();
+                }
+            }
+        });
+
+        countEditText.setOnKeyListener(new View.OnKeyListener() {
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    MyUtil.hideSoftKeyboard(MainActivity.this);
+                    updateCountText();
+
+                    listAdapter.notifyDataSetChanged();
+
+                    return true;
+                }
+                return false;
+            }
+        });
         cashCounter.initIcons(getApplicationContext());
         setupUI(findViewById(R.id.main_container));
+    }
+
+
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        super.onSaveInstanceState(savedInstanceState);
+        // Save UI state changes to the savedInstanceState.
+        // This bundle will be passed to onCreate if the process is
+        // killed and restarted.
+        MySharedPreferences.saveCashCounter(cashCounter, this);
+        Log.d("CashCounter", "SAVING");
+        // etc.
     }
 
     private void prepareListData() {
@@ -126,13 +168,10 @@ public class MainActivity extends ActionBarActivity {
         listDataChild.put(listDataHeader.get(1), coins);
         listDataChild.put(listDataHeader.get(2), cash);
 
-        if(listAdapter != null) {
+        if (listAdapter != null) {
             listAdapter.notifyDataSetChanged();
         }
     }
-
-
-
 
 
     @Override
@@ -150,31 +189,62 @@ public class MainActivity extends ActionBarActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        if (id == R.id.action_clear) {
+            cashCounter.clear();
+            ImageView image = (ImageView) findViewById(R.id.coinImageView);
+            EditText countEditText = (EditText) findViewById(R.id.selectedItemEditText);
+            countEditText.setText("");
+            prepareListData();
+            Bitmap icon = cashCounter.getSelectedMoney().icon;
+            image.setImageBitmap(icon);
+
         }
 
         return super.onOptionsItemSelected(item);
     }
 
     public void minusClicked(View v) {
-        cashCounter.getSelectedMoney().setCount(cashCounter.getSelectedMoney().getCount() - 1);
-        //cashCounter.setMoneyArray(moneyArray);
-
-        prepareListData();
+        Money money = cashCounter.getSelectedMoney();
+        if(!money.getType().equals("error")) {
+            money.setCount(money.getCount() - 1);
+            //cashCounter.setMoneyArray(moneyArray);
+            EditText countText = (EditText) findViewById(R.id.selectedItemEditText);
+            countText.setText(MyUtil.parseAmount(money.getCount()));
+            prepareListData();
+        }
     }
 
     public void plusClicked(View v) {
-        cashCounter.getSelectedMoney().setCount(cashCounter.getSelectedMoney().getCount() + 1);
-        //cashCounter.setMoneyArray(moneyArray);
 
-        prepareListData();
+        if(!cashCounter.getSelectedMoney().getType().equals("error")) {
+            cashCounter.getSelectedMoney().setCount(cashCounter.getSelectedMoney().getCount() + 1);
+            //cashCounter.setMoneyArray(moneyArray);
+            EditText countText = (EditText) findViewById(R.id.selectedItemEditText);
+            countText.setText(MyUtil.parseAmount(cashCounter.getSelectedMoney().getCount()));
+            prepareListData();
+        }
+    }
+
+    public void updateCountText() {
+        EditText countText = (EditText) findViewById(R.id.selectedItemEditText);
+        String text = countText.getText().toString();
+        if (text.contains("x")) {
+        } else {
+            if (!text.equals("")) {
+                cashCounter.getSelectedMoney().setCount(Integer.parseInt(text));
+                countText.setText(text + "x");
+
+            } else {
+                cashCounter.getSelectedMoney().setCount(0);
+                countText.setText("0x");
+            }
+        }
     }
 
     public void setupUI(View view) {
 
         //Set up touch listener for non-text box views to hide keyboard.
-        if(!(view instanceof EditText)) {
+        if (!(view instanceof EditText)) {
 
             view.setOnTouchListener(new View.OnTouchListener() {
 
@@ -182,10 +252,13 @@ public class MainActivity extends ActionBarActivity {
                     MyUtil.hideSoftKeyboard(MainActivity.this);
                     EditText editText = (EditText) findViewById(R.id.selectedItemEditText);
                     editText.setCursorVisible(false);
+                    updateCountText();
+
                     return false;
                 }
 
             });
+
         }
 
         //If a layout container, iterate over children and seed recursion.
