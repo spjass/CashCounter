@@ -6,15 +6,13 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by Spjass on 12-Jan-16.
- */
 public class CashCounter {
 
     private List<Money> moneyArray;
     protected float total;
     Money selectedMoney;
     Money error;
+    private Money tillFloat;
 
     public CashCounter() {
 
@@ -37,10 +35,10 @@ public class CashCounter {
         moneyArray.add(new Money(500f, "cash", R.drawable.euro_500));
 
         moneyArray.get(0).setCount(50);
-        Log.d("CashCounter", moneyArray.get(0).getValue() + " "  + moneyArray.get(0).getTotalValue() + "");
         moneyArray.get(5).setCount(25);
         moneyArray.get(4).setCount(25);
         error = new Money(0f, "error", 0);
+        tillFloat = new Money(0, "float", 0);
         selectedMoney = error;
 
     }
@@ -59,12 +57,23 @@ public class CashCounter {
 
     public Money findMoneyByName(String name) {
         for (Money money : moneyArray) {
-            if(money.name.equals(name)) {
+            if(money.getName().equals(name)) {
                 return money;
             }
         }
 
+        if (name.equals("Till float")) {
+            return tillFloat;
+        }
         return new Money(0.00f, "error", R.drawable.coin_1c);
+    }
+
+    public Money getTillFloat() {
+        return tillFloat;
+    }
+
+    public void setTillFloat(Money tillFloat) {
+        this.tillFloat = tillFloat;
     }
 
     public Money getSelectedMoney() {
@@ -82,6 +91,7 @@ public class CashCounter {
 
         selectedMoney = error;
         error.setCount(0);
+        tillFloat.setValue(0);
     }
 
     public List<Money> getMoneyArray() {
@@ -101,8 +111,6 @@ public class CashCounter {
             }
         }
 
-        Log.d("CashCounter",total + " total");
-
 
         return total;
     }
@@ -120,7 +128,7 @@ public class CashCounter {
     }
 
     public List<Money> getCoinArray() {
-        List<Money> cashArray = new ArrayList<Money>();
+        List<Money> cashArray = new ArrayList<>();
         for (Money money:moneyArray) {
             if(money.getType().equals("coin")) {
                 cashArray.add(money);
@@ -131,7 +139,7 @@ public class CashCounter {
     }
 
     public List<Money> getCashArray() {
-        List<Money> cashArray = new ArrayList<Money>();
+        List<Money> cashArray = new ArrayList<>();
         for (Money money:moneyArray) {
             if(money.getType().equals("cash")) {
                 cashArray.add(money);

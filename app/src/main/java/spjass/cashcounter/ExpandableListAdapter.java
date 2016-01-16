@@ -20,6 +20,7 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
     private HashMap<String, List<Money>> _listDataChild;
     private CashCounter _cashCounter;
     public static String BILLS_TITLE = "Bills";
+
     public ExpandableListAdapter(Context context, List<String> listDataHeader,
                                  HashMap<String, List<Money>> listChildData, CashCounter cashCounter) {
         this._context = context;
@@ -62,23 +63,26 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
         TextView txtListChildCount = (TextView) convertView
                 .findViewById(R.id.lblListItemCount);
 
-        Log.d("CashCounter", money.getCount()+" count get childview");
-        Log.d("CashCounter", money.getTotalValue()+" count get childview");
+        if(!money.getType().equals("float")) {
+            txtListChildCount.setText(money.getCount() + "x");
+            txtListChildSum.setText(MyUtil.parseCurrency(money.getTotalValue()));
 
-        txtListChildCount.setText(money.getCount() + "x");
-        txtListChildSum.setText(MyUtil.parseCurrency(money.getTotalValue()));
+        } else {
+            txtListChildCount.setVisibility(View.INVISIBLE);
+            txtListChildSum.setText(MyUtil.parseCurrency(money.getValue()));
+        }
+
         txtListChild.setText(money.getName());
+
         return convertView;
     }
 
     @Override
     public int getChildrenCount(int groupPosition) {
-        if(groupPosition != 0) {
-            return this._listDataChild.get(this._listDataHeader.get(groupPosition))
-                    .size();
-        }
 
-        return 0;
+        return this._listDataChild.get(this._listDataHeader.get(groupPosition))
+                .size();
+
     }
 
     @Override
@@ -115,10 +119,13 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
 
         TextView lblListSumHeader = (TextView) convertView.findViewById(R.id.lblListSumHeader);
 
-        if(!headerTitle.equals("Total")) {
+        TextView lblListSumMinusTill =(TextView) convertView.findViewById(R.id.lblListSumMinusTill);
+
+        if (!headerTitle.equals("Total")) {
             if (isExpanded) {
                 lblListAmountHeader.setVisibility(View.VISIBLE);
                 lblListSumHeader.setVisibility(View.VISIBLE);
+                lblListSumMinusTill.setVisibility(View.GONE);
             } else {
                 lblListAmountHeader.setVisibility(View.GONE);
                 lblListSumHeader.setVisibility(View.GONE);
@@ -130,9 +137,16 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
         } else if (headerTitle.equals(BILLS_TITLE)) {
             lblListSum.setText(MyUtil.parseCurrency(_cashCounter.getCashTotal()));
         } else if (headerTitle.equals("Total")) {
-            lblListSum.setText(MyUtil.parseCurrency(_cashCounter.getTotal()));
-        }
+            if(_cashCounter.getTillFloat().getValue() == 0) {
+                lblListSumMinusTill.setVisibility(View.GONE);
+            } else {
+                lblListSumMinusTill.setVisibility(View.VISIBLE);
+            }
 
+
+            lblListSum.setText(MyUtil.parseCurrency(_cashCounter.getTotal()));
+            lblListSumMinusTill.setText("(" + MyUtil.parseCurrency(_cashCounter.getTotal() - _cashCounter.getTillFloat().getValue()) + ")");
+        }
 
 
         lblListHeader.setTypeface(null, Typeface.BOLD);

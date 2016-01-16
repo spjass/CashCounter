@@ -6,11 +6,9 @@ import android.graphics.BitmapFactory;
 
 import java.text.DecimalFormat;
 
-/**
- * Created by Spjass on 13-Jan-16.
- */
+
 public class Money {
-    String name;
+    private String name;
     int count;
     float value;
     float totalValue;
@@ -26,8 +24,13 @@ public class Money {
     }
 
     public String getName() {
-        DecimalFormat df = new DecimalFormat("0.00€");
-        return df.format(value);
+        if(!type.equals("float")) {
+            DecimalFormat df = new DecimalFormat("0.00€");
+            return df.format(value);
+        } else {
+            return "Till float";
+        }
+
     }
 
     public void setName(String name) {

@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -23,7 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends AppCompatActivity {
     ExpandableListAdapter listAdapter;
     ExpandableListView expListView;
     List<String> listDataHeader;
@@ -40,11 +41,11 @@ public class MainActivity extends ActionBarActivity {
         cashCounter = MySharedPreferences.getCashCounter(this);
         moneyArray = cashCounter.getMoneyArray();
 
+
         prepareListData();
 
         listAdapter = new ExpandableListAdapter(this, listDataHeader, listDataChild, cashCounter);
         listAdapter.notifyDataSetChanged();
-        Log.d("CashCounter", cashCounter.getMoneyArray().get(0).getCount() + "");
         expListView.setAdapter(listAdapter);
 
         // Listview Group click listener
@@ -90,13 +91,20 @@ public class MainActivity extends ActionBarActivity {
                     cashCounter.setSelectedMoney(cashCounter.getCoinArray().get(childPosition));
                 } else if (groupPosition == 2) {
                     cashCounter.setSelectedMoney(cashCounter.getCashArray().get(childPosition));
+                } else if (groupPosition == 0) {
+                    cashCounter.setSelectedMoney(cashCounter.getTillFloat());
                 }
 
                 ImageView image = (ImageView) findViewById(R.id.coinImageView);
                 EditText countEditText = (EditText) findViewById(R.id.selectedItemEditText);
-                countEditText.setText(MyUtil.parseAmount(cashCounter.getSelectedMoney().getCount()));
+                if (cashCounter.getSelectedMoney().getType().equals("float")) {
+                    countEditText.setText(MyUtil.parseCurrency(cashCounter.getSelectedMoney().getValue()));
+                } else {
+                    countEditText.setText(MyUtil.parseAmount(cashCounter.getSelectedMoney().getCount()));
+                }
                 Bitmap icon = cashCounter.getSelectedMoney().icon;
-
+                refreshTotalText();
+                MainActivity.this.prepareListData();
                 image.setImageBitmap(icon);
                 return false;
             }
@@ -109,7 +117,7 @@ public class MainActivity extends ActionBarActivity {
                 //
                 if (countEditText.hasFocus()) {
                     //((EditText) v).performLongClick();
-                    ((EditText)v).selectAll();
+                    ((EditText) v).selectAll();
                 }
             }
         });
@@ -132,7 +140,6 @@ public class MainActivity extends ActionBarActivity {
     }
 
 
-
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
@@ -140,37 +147,40 @@ public class MainActivity extends ActionBarActivity {
         // This bundle will be passed to onCreate if the process is
         // killed and restarted.
         MySharedPreferences.saveCashCounter(cashCounter, this);
-        Log.d("CashCounter", "SAVING");
         // etc.
     }
 
     private void prepareListData() {
-        listDataHeader = new ArrayList<String>();
+        listDataHeader = new ArrayList<>();
         listDataChild = new HashMap<String, List<Money>>();
 
         listDataHeader.add("Total");
         listDataHeader.add("Coins");
         listDataHeader.add(ExpandableListAdapter.BILLS_TITLE);
 
-        List<Money> coins = new ArrayList<Money>();
-        List<Money> cash = new ArrayList<Money>();
+        List<Money> total = new ArrayList<>();
+        List<Money> coins = new ArrayList<>();
+        List<Money> cash = new ArrayList<>();
 
         for (Money money : moneyArray) {
             if (money.getType().equals("cash")) {
                 cash.add(money);
-            } else {
+            } else if (money.getType().equals("coin")) {
                 coins.add(money);
             }
-
-            Log.d("CashCounter", "prepareListData() " + money.getCount());
         }
 
+        total.add(cashCounter.getTillFloat());
+
+        listDataChild.put(listDataHeader.get(0), total);
         listDataChild.put(listDataHeader.get(1), coins);
         listDataChild.put(listDataHeader.get(2), cash);
 
         if (listAdapter != null) {
             listAdapter.notifyDataSetChanged();
         }
+
+        refreshTotalText();
     }
 
 
@@ -179,6 +189,11 @@ public class MainActivity extends ActionBarActivity {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
+    }
+
+    public void refreshTotalText() {
+        TextView textView = (TextView) findViewById(R.id.cashViewTotalText);
+        textView.setText(MyUtil.parseCurrency(cashCounter.getSelectedMoney().getTotalValue()));
     }
 
     @Override
@@ -205,22 +220,31 @@ public class MainActivity extends ActionBarActivity {
 
     public void minusClicked(View v) {
         Money money = cashCounter.getSelectedMoney();
-        if(!money.getType().equals("error")) {
-            money.setCount(money.getCount() - 1);
+        if (!money.getType().equals("error")) {
             //cashCounter.setMoneyArray(moneyArray);
             EditText countText = (EditText) findViewById(R.id.selectedItemEditText);
-            countText.setText(MyUtil.parseAmount(money.getCount()));
+            if (!cashCounter.getSelectedMoney().getType().equals("float")) {
+                money.setCount(money.getCount() - 1);
+                countText.setText(MyUtil.parseAmount(money.getCount()));
+            } else {
+                countText.setText(MyUtil.parseCurrency(money.getValue()));
+            }
             prepareListData();
         }
     }
 
     public void plusClicked(View v) {
 
-        if(!cashCounter.getSelectedMoney().getType().equals("error")) {
-            cashCounter.getSelectedMoney().setCount(cashCounter.getSelectedMoney().getCount() + 1);
+        if (!cashCounter.getSelectedMoney().getType().equals("error")) {
             //cashCounter.setMoneyArray(moneyArray);
             EditText countText = (EditText) findViewById(R.id.selectedItemEditText);
-            countText.setText(MyUtil.parseAmount(cashCounter.getSelectedMoney().getCount()));
+            if (!cashCounter.getSelectedMoney().getType().equals("float")) {
+                cashCounter.getSelectedMoney().setCount(cashCounter.getSelectedMoney().getCount() + 1);
+
+                countText.setText(MyUtil.parseAmount(cashCounter.getSelectedMoney().getCount()));
+            } else {
+                countText.setText(MyUtil.parseCurrency(cashCounter.getSelectedMoney().getValue()));
+            }
             prepareListData();
         }
     }
@@ -228,8 +252,7 @@ public class MainActivity extends ActionBarActivity {
     public void updateCountText() {
         EditText countText = (EditText) findViewById(R.id.selectedItemEditText);
         String text = countText.getText().toString();
-        if (text.contains("x")) {
-        } else {
+        if (!text.contains("x") && !text.contains("€") && !cashCounter.getSelectedMoney().getType().equals("float")) {
             if (!text.equals("")) {
                 cashCounter.getSelectedMoney().setCount(Integer.parseInt(text));
                 countText.setText(text + "x");
@@ -237,6 +260,17 @@ public class MainActivity extends ActionBarActivity {
             } else {
                 cashCounter.getSelectedMoney().setCount(0);
                 countText.setText("0x");
+            }
+        }
+
+        if (cashCounter.getSelectedMoney().getType().equals("float") && !text.contains("€")) {
+            if (!text.equals("")) {
+                cashCounter.getSelectedMoney().setValue(Integer.parseInt(text));
+                countText.setText(text + "€");
+
+            } else {
+                cashCounter.getSelectedMoney().setCount(0);
+                countText.setText("0€");
             }
         }
     }
@@ -253,6 +287,7 @@ public class MainActivity extends ActionBarActivity {
                     EditText editText = (EditText) findViewById(R.id.selectedItemEditText);
                     editText.setCursorVisible(false);
                     updateCountText();
+                    refreshTotalText();
 
                     return false;
                 }

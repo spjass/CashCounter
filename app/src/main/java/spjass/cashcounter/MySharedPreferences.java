@@ -8,9 +8,7 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by juhorautio on 15.1.16.
- */
+
 public class MySharedPreferences {
 
 
@@ -21,18 +19,24 @@ public class MySharedPreferences {
             money.setCount(preferences.getInt(money.getName(),0));
         }
 
+        cashCounter.getTillFloat().setValue(preferences.getFloat(cashCounter.getTillFloat().getName(), 0));
+        cashCounter.setSelectedMoney(cashCounter.findMoneyByName(preferences.getString("selectedMoney", cashCounter.error.getName())));
+
+
         return cashCounter;
     }
 
     public static void saveCashCounter(CashCounter cashCounter, Activity activity) {
         SharedPreferences preferences = activity.getSharedPreferences("preferences", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
+
         for(Money money : cashCounter.getMoneyArray()) {
-            editor.putInt(money.name, money.getCount());
+            editor.putInt(money.getName(), money.getCount());
         }
 
-        editor.commit();
+        editor.putString("selectedMoney", cashCounter.getSelectedMoney().getName());
+        editor.putFloat(cashCounter.getTillFloat().getName(), cashCounter.getTillFloat().getValue());
 
-        Log.d("CashCounter", preferences.getInt("0.10€",-1) + " COIN");
+        editor.commit();
     }
 }
